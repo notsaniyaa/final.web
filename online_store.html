@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tic Tac Toe</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Pacifico&family=Playfair+Display:wght@600&display=swap');
+
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #fce4ec;
+      font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+    }
+
+    .game-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      border-radius: 15px;
+      background: linear-gradient(145deg, #ffffff, #ffd6e7);
+      box-shadow: 5px 5px 15px #d1a3b4, -5px -5px 15px #ffffff;
+    }
+
+    .game-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 56px;
+      color: #d9005c;
+      margin-bottom: 30px;
+      text-shadow: 4px 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+ /* Mode selection styling */
+ .mode-selection {
+      margin-bottom: 20px;
+      font-size: 20px;
+      font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+      font-weight: 600;
+      color: #ff3385;
+    }
+
+    .mode-selection select {
+      padding: 10px;
+      font-size: 18px;
+      border-radius: 5px;
+      border: 2px solid #ff99cc;
+      background-color: #ffe6f2;
+      color: #ff3385;
+      font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100px;
+      height: 100px;
+      background-color: #ffcce6;
+      border: 2px solid #ff99cc;
+      font-size: 24px;
+      font-weight: bold;
+      color: #ff3385;
+      cursor: pointer;
+      border-radius: 10px;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+
+    .cell:hover {
+      background-color: #ff99cc;
+      transform: scale(1.05);
+    }
+
+    .status {
+      margin-bottom: 20px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #ff3385;
+      text-shadow: 1px 1px 2px #ff80bf;
+    }
+
+    .reset-button {
+      padding: 12px 25px;
+      font-size: 18px;
+      background-color: #ff80bf;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s;
+      font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+    }
+
+    .reset-button:hover {
+      background-color: #ff3385;
+      transform: scale(1.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <div class="game-title">Tic Tac Toe</div>
+    <div class="mode-selection">
+      <label for="game-mode">Select Mode: </label>
+      <select id="game-mode">
+        <option value="two-players">Two Players</option>
+        <option value="single-player">Single Player (vs Bot)</option>
+      </select>
+    </div>
+    <div class="board">
+      <div class="cell" data-index="0"></div>
+      <div class="cell" data-index="1"></div>
+      <div class="cell" data-index="2"></div>
+      <div class="cell" data-index="3"></div>
+      <div class="cell" data-index="4"></div>
+      <div class="cell" data-index="5"></div>
+      <div class="cell" data-index="6"></div>
+      <div class="cell" data-index="7"></div>
+      <div class="cell" data-index="8"></div>
+    </div>
+    <div class="status">Player X's turn</div>
+    <button class="reset-button">Reset Game</button>
+  </div>
+  <script>
+    const cells = document.querySelectorAll('.cell');
+    const statusDisplay = document.querySelector('.status');
+    const resetButton = document.querySelector('.reset-button');
+    const gameModeSelect = document.querySelector('#game-mode');
+
+    let board = ['', '', '', '', '', '', '', '', ''];
+    let currentPlayer = 'X';
+    let gameActive = true;
+    let gameMode = 'two-players';
+
+    const winningConditions = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8],
+      [0, 3, 6], [1, 4, 7], [2, 5, 8],
+      [0, 4, 8], [2, 4, 6]
+    ];
+
+    function sendNotification(message) {
+      if (Notification.permission === 'granted') {
+        new Notification('Tic Tac Toe', {
+          body: message
+        });
+      }
+    }
+
+    function handleCellClick(event) {
+      const clickedCell = event.target;
+      const clickedCellIndex = parseInt(clickedCell.getAttribute('data-index'));
+
+      if (board[clickedCellIndex] !== '' || !gameActive) {
+        return;
+      }
+
+      board[clickedCellIndex] = currentPlayer;
+      clickedCell.textContent = currentPlayer;
+
+      checkResult();
+
+      if (gameMode === 'single-player' && gameActive && currentPlayer === 'O') {
+        botMove();
+      }
+    }
+
+    function botMove() {
+      const availableCells = board.map((value, index) => value === '' ? index : null).filter(index => index !== null);
+      const randomIndex = availableCells[Math.floor(Math.random() * availableCells.length)];
+
+      board[randomIndex] = 'O';
+      cells[randomIndex].textContent = 'O';
+
+      checkResult();
+    }
+
+    function checkResult() {
+      let roundWon = false;
+      for (let condition of winningConditions) {
+        const [a, b, c] = condition;
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+          roundWon = true;
+          break;
+        }
+      }
+
+      if (roundWon) {
+        const message = `Player ${currentPlayer} has won!`;
+        statusDisplay.textContent = message;
+        sendNotification(message);
+        gameActive = false;
+        return;
+      }
+
+      if (!board.includes('')) {
+        const message = 'Game ended in a draw!';
+        statusDisplay.textContent = message;
+        sendNotification(message);
+        gameActive = false;
+        return;
+      }
+
+      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+      statusDisplay.textContent = `Player ${currentPlayer}'s turn`;
+    }
+
+    function resetGame() {
+      board = ['', '', '', '', '', '', '', '', ''];
+      currentPlayer = 'X';
+      gameActive = true;
+      statusDisplay.textContent = `Player ${currentPlayer}'s turn`;
+
+      cells.forEach(cell => {
+        cell.textContent = '';
+      });
+    }
+
+    gameModeSelect.addEventListener('change', (event) => {
+      gameMode = event.target.value;
+      resetGame();
+    });
+
+    cells.forEach(cell => {
+      cell.addEventListener('click', handleCellClick);
+    });
+
+    resetButton.addEventListener('click', resetGame);
+
+    // Запрос разрешения на уведомления при загрузке страницы
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  </script>
+</body>
+</html>
